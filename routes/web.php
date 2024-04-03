@@ -37,7 +37,7 @@ route::middleware('isLogin')->group(function () {
     route::delete('/user/delete/{id}', [AuthController::class, 'destroy'])->name('deleteUser');
 
     route::get('/purchase', [PurchaseController::class, 'index'])->name('pagePurchase');
-
+    route::post('/purchase/add', [PurchaseController::class, 'store'])->name('createPurchase');
     route::get('/logout', [AuthController::class, 'logout'])->name('logout');
 });
 

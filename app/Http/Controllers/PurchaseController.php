@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Purchase;
 use Illuminate\Http\Request;
@@ -33,36 +34,39 @@ class PurchaseController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'qty' => 'required|integer|min:1',
+            'products' => 'required|array',
             'products.*.product_id' => 'required|exists:products,id',
             'products.*.quantity' => 'required|integer|min:1',
+
+            'name' => 'required',
+            'address' => 'required',
+            'phone_number' => 'required'
         ]);
 
-        $purchase = Purchase::create([
-            'user_id' => Auth::user()->id,
-            'total_price' => 0, // Akan diisi setelah menghitung total
-            'qty' => $request->qty,
-        ]);
 
+        $customer = new Customer();
+
+        $customer->name = $request->name;
+        $customer->address = $request->address;
+        $customer->phone_number = $request->phone_number;
+        $customer->save();
+
+        $purchase = new Purchase();
+        $purchase->user_id = Auth::user()->id;
+        $purchase->customer_id = $customer->id;
+        $purchase->total_purchase = $request->total_purchase;
+        $purchase->save();
+    
+        // Simpan detail produk yang dibeli
         foreach ($request->products as $product) {
-            $productModel = Product::find($product['product_id']);
-            $subtotal = $product['quantity'] * $productModel->price;
-
             $purchase->products()->attach($product['product_id'], [
                 'quantity' => $product['quantity'],
-                'price' => $productModel->price,
+                'totalPrice' => $product['totalPrice'],
+                'unit_price' => $product['price']
             ]);
-
-            $productModel->stock -= $product['quantity']; // Kurangi stok produk
-            $productModel->save();
-
-            // Tambahkan operasi lain jika diperlukan, misalnya update statistik, dll.
         }
+        return redirect()->back()->with('success', 'Purchase created successfully.');
 
-        $totalPrice = $purchase->products()->sum('price');
-        $purchase->update(['total_price' => $totalPrice]);
-
-        return redirect()->route('purchases.index')->with('success', 'Purchase created successfully');
     }
 
     /**
